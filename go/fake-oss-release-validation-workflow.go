@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -44,6 +45,16 @@ type (
 		Description []StringDatum
 		Output      RunTestsOutput
 	}
+
+	CallbackData struct {
+		Method  string            `json:"method"`
+		Url     string            `json:"url"`
+		Headers map[string]string `json:"headers"`
+	}
+
+	Input struct {
+		CallbackData CallbackData `json:"callback-data"`
+	}
 )
 
 const (
@@ -53,8 +64,8 @@ const (
 	Error      Status = "Error"
 )
 
-func FakeOSSReleaseValidationWorkflow(ctx workflow.Context) (Output, error) {
-	fmt.Println("Wf: Starting")
+func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output, error) {
+	fmt.Printf("Wf: Starting. Input: %v\n", input)
 	var status = InProgress
 
 	output := Output{
@@ -65,8 +76,10 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context) (Output, error) {
 		return output, err
 	}
 
-	fmt.Println("Wf: Sleeping")
-	workflow.Sleep(ctx, 10*time.Second)
+	for i := 0; i < 10; i++ {
+		fmt.Printf("Wf: Sleeping %d\n", i)
+		workflow.Sleep(ctx, 10*time.Second)
+	}
 	fmt.Println("Wf: Done")
 
 	output.Output = RunTestsOutput{
@@ -90,5 +103,31 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context) (Output, error) {
 	}
 
 	status = Done
+
+	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+	})
+	if err = workflow.ExecuteActivity(ctx, NotifyWorkflowComplete, input.CallbackData).Get(ctx, nil); err != nil {
+		return output, err
+	}
+
 	return output, nil
+}
+
+func NotifyWorkflowComplete(callbackData CallbackData) error {
+	client := &http.Client{}
+	req, err := http.NewRequest(callbackData.Method, callbackData.Url, nil)
+	if err != nil {
+		return err
+	}
+	curlCmd := fmt.Sprintf("curl -L -X %s", callbackData.Method)
+	for k, v := range callbackData.Headers {
+		req.Header.Add(k, v)
+		curlCmd += fmt.Sprintf(` -H "%s: %s"`, k, v)
+	}
+	curlCmd += " " + callbackData.Url
+	fmt.Println(curlCmd)
+
+	client.Do(req)
+	return nil
 }

@@ -16,6 +16,7 @@ func main() {
 
 	w := worker.New(c, "your-custom-task-queue-name", worker.Options{})
 	w.RegisterWorkflow(FakeOSSReleaseValidationWorkflow)
+	w.RegisterActivity(NotifyWorkflowComplete)
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {
