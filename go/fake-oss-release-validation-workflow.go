@@ -66,7 +66,7 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context) (Output, error) {
 	}
 
 	fmt.Println("Wf: Sleeping")
-	workflow.Sleep(ctx, 30*time.Second)
+	workflow.Sleep(ctx, 10*time.Second)
 	fmt.Println("Wf: Done")
 
 	output.Output = RunTestsOutput{
