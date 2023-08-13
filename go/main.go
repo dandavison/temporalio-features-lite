@@ -14,8 +14,9 @@ func main() {
 	}
 	defer c.Close()
 
-	w := worker.New(c, "your-custom-task-queue-name", worker.Options{})
+	w := worker.New(c, "my-task-queue", worker.Options{})
 	w.RegisterWorkflow(FakeOSSReleaseValidationWorkflow)
+	w.RegisterWorkflow(WorkflowWithSignal)
 	w.RegisterActivity(NotifyWorkflowComplete)
 
 	err = w.Run(worker.InterruptCh())
