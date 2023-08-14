@@ -54,8 +54,30 @@ type (
 		Headers map[string]string `json:"headers"`
 	}
 
+	Values map[string]any
+
 	Input struct {
-		Values map[string]any
+		KubeConfig  string
+		KubeContext string
+
+		// User provided values for the helm charts
+		// Key is the chart name
+		// Value is the values yaml content
+		Values Values
+
+		EnableFaultInjection bool
+
+		// BenchTestDuration specifies how long the bench test is expected to run
+		// If specified, the bench test will run multiple times until the specified duration is reached.
+		// NOTE: The duration is only checked when starting a new bench test run, and not enforced during the run.
+		// This means that the bench test will run longer than the specified duration and could take up to
+		// the specified duration + the duration need by one run of the bench test.
+		// If not specified, the bench test will only run once.
+		// The format is the same as the one used by time.ParseDuration.
+		BenchTestDuration string
+
+		// BenchTestParallelism specifies how many parallel bench tests should be run.
+		BenchTestParallelism int
 	}
 )
 
