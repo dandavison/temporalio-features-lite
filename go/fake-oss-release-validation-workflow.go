@@ -84,7 +84,7 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 		return output, err
 	}
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 4; i++ {
 		fmt.Printf("Wf: Sleeping %d\n", i)
 		workflow.Sleep(ctx, 10*time.Second)
 	}
