@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -53,7 +55,7 @@ type (
 	}
 
 	Input struct {
-		CallbackData CallbackData `json:"callback-data"`
+		Values map[string]any
 	}
 )
 
@@ -66,12 +68,18 @@ const (
 
 func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output, error) {
 	fmt.Printf("Wf: Starting. Input: %v\n", input)
+
+	callbackData, err := getCallbackData(input)
+	if err != nil {
+		return Output{}, err
+	}
+
 	var status = InProgress
 
 	output := Output{
 		Description: []StringDatum{{Name: "Run", Value: "Fake OSS Server validation run 1"}, {Name: "Server version", Value: "fake-server-release-tag"}},
 	}
-	err := workflow.SetQueryHandler(ctx, "getStatus", func() (Status, error) { return status, nil })
+	err = workflow.SetQueryHandler(ctx, "getStatus", func() (Status, error) { return status, nil })
 	if err != nil {
 		return output, err
 	}
@@ -107,7 +115,7 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
 	})
-	if err = workflow.ExecuteActivity(ctx, NotifyWorkflowComplete, input.CallbackData).Get(ctx, nil); err != nil {
+	if err = workflow.ExecuteActivity(ctx, NotifyWorkflowComplete, callbackData).Get(ctx, nil); err != nil {
 		return output, err
 	}
 
@@ -130,4 +138,22 @@ func NotifyWorkflowComplete(callbackData CallbackData) error {
 
 	client.Do(req)
 	return nil
+}
+
+func getCallbackData(input Input) (CallbackData, error) {
+	value, ok := input.Values["GithubCallbackData"]
+	if !ok {
+		return CallbackData{}, errors.New("GithubCallbackData not found in input")
+	}
+
+	s, err := json.Marshal(value)
+	if err != nil {
+		return CallbackData{}, errors.New("failed to marshal GithubCallbackData to JSON")
+	}
+
+	var callbackData CallbackData
+	if err := json.Unmarshal(s, &callbackData); err != nil {
+		return CallbackData{}, errors.New("failed to parse GithubCallbackData JSON")
+	}
+	return callbackData, nil
 }
