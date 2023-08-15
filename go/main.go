@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"com.github/dandavison/temporalio-features-lite/activities"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )
@@ -14,10 +15,12 @@ func main() {
 	}
 	defer c.Close()
 
+	var a *activities.Activities
+
 	w := worker.New(c, "my-task-queue", worker.Options{})
 	w.RegisterWorkflow(FakeOSSReleaseValidationWorkflow)
 	w.RegisterWorkflow(WorkflowWithSignal)
-	w.RegisterActivity(NotifyWorkflowComplete)
+	w.RegisterActivity(a.DoCallbackActivity)
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {

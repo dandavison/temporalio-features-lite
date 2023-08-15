@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"time"
 
+	"com.github/dandavison/temporalio-features-lite/activities"
 	"go.temporal.io/sdk/workflow"
 )
 
@@ -48,12 +46,6 @@ type (
 		Output      RunTestsOutput
 	}
 
-	CallbackData struct {
-		Method  string            `json:"method"`
-		Url     string            `json:"url"`
-		Headers map[string]string `json:"headers"`
-	}
-
 	Values map[string]any
 
 	Input struct {
@@ -78,6 +70,8 @@ type (
 
 		// BenchTestParallelism specifies how many parallel bench tests should be run.
 		BenchTestParallelism int
+
+		CallbackInput activities.CallbackActivityInput
 	}
 )
 
@@ -91,17 +85,12 @@ const (
 func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output, error) {
 	fmt.Printf("Wf: Starting. Input: %v\n", input)
 
-	callbackData, err := getCallbackData(input)
-	if err != nil {
-		return Output{}, err
-	}
-
 	var status = InProgress
 
 	output := Output{
 		Description: []StringDatum{{Name: "Run", Value: "Fake OSS Server validation run 1"}, {Name: "Server version", Value: "fake-server-release-tag"}},
 	}
-	err = workflow.SetQueryHandler(ctx, "getStatus", func() (Status, error) { return status, nil })
+	err := workflow.SetQueryHandler(ctx, "getStatus", func() (Status, error) { return status, nil })
 	if err != nil {
 		return output, err
 	}
@@ -134,48 +123,9 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 
 	status = Done
 
-	ctx = workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-	})
-	if err = workflow.ExecuteActivity(ctx, NotifyWorkflowComplete, callbackData).Get(ctx, nil); err != nil {
-		return output, err
-	}
+	// *** Notify CI service that pipeline is near complete ***
+	// We do not allow failure of this activity to fail the workflow.
+	activities.DoCallback(ctx, input.CallbackInput)
 
 	return output, nil
-}
-
-func NotifyWorkflowComplete(callbackData CallbackData) error {
-	client := &http.Client{}
-	req, err := http.NewRequest(callbackData.Method, callbackData.Url, nil)
-	if err != nil {
-		return err
-	}
-	curlCmd := fmt.Sprintf("curl -L -X %s", callbackData.Method)
-	for k, v := range callbackData.Headers {
-		req.Header.Add(k, v)
-		curlCmd += fmt.Sprintf(` -H "%s: %s"`, k, v)
-	}
-	curlCmd += " " + callbackData.Url
-	fmt.Println(curlCmd)
-
-	client.Do(req)
-	return nil
-}
-
-func getCallbackData(input Input) (CallbackData, error) {
-	value, ok := input.Values["GithubCallbackData"]
-	if !ok {
-		return CallbackData{}, errors.New("GithubCallbackData not found in input")
-	}
-
-	s, err := json.Marshal(value)
-	if err != nil {
-		return CallbackData{}, errors.New("failed to marshal GithubCallbackData to JSON")
-	}
-
-	var callbackData CallbackData
-	if err := json.Unmarshal(s, &callbackData); err != nil {
-		return CallbackData{}, errors.New("failed to parse GithubCallbackData JSON")
-	}
-	return callbackData, nil
 }
