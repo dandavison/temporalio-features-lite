@@ -1,1 +1,0 @@
-/Users/dan/src/temporalio/oss-cicd/e2e/workflows/environment/activities/callback.go
