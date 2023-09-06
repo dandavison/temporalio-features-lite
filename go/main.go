@@ -20,7 +20,7 @@ func main() {
 	w := worker.New(c, "my-task-queue", worker.Options{})
 	w.RegisterWorkflow(FakeOSSReleaseValidationWorkflow)
 	w.RegisterWorkflow(WorkflowWithSignal)
-	w.RegisterActivity(a.DoCallbackActivity)
+	w.RegisterActivity(a.PipelineCompletionCallback)
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {

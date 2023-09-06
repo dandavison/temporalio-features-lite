@@ -71,7 +71,7 @@ type (
 		// BenchTestParallelism specifies how many parallel bench tests should be run.
 		BenchTestParallelism int
 
-		CallbackInput activities.CallbackActivityInput
+		CallbackInput activities.PipelineCompletionCallbackInput
 	}
 )
 
@@ -125,7 +125,7 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 
 	// *** Notify CI service that pipeline is near complete ***
 	// We do not allow failure of this activity to fail the workflow.
-	activities.DoCallback(ctx, input.CallbackInput)
+	activities.CallPipelineCompletionCallback(ctx, input.CallbackInput)
 
 	return output, nil
 }
