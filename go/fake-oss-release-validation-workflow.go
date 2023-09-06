@@ -85,6 +85,12 @@ const (
 func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output, error) {
 	fmt.Printf("Wf: Starting. Input: %v\n", input)
 
+	defer func() {
+		// *** Notify CI service that pipeline is complete ***
+		// We do not allow failure of this activity to fail the workflow.
+		activities.CallPipelineCompletionCallback(ctx, input.CallbackInput)
+	}()
+
 	var status = InProgress
 
 	output := Output{
@@ -122,10 +128,6 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 	}
 
 	status = Done
-
-	// *** Notify CI service that pipeline is near complete ***
-	// We do not allow failure of this activity to fail the workflow.
-	activities.CallPipelineCompletionCallback(ctx, input.CallbackInput)
 
 	return output, nil
 }
