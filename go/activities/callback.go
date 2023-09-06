@@ -1,1 +1,1 @@
-/Users/dan/src/temporalio/oss-cicd/e2e/workflows/environment/activities/callback.go
+/Users/dan/src/temporalio/oss-cicd/e2e/workflows/environment/activities/pipeline_completion_callback.go
