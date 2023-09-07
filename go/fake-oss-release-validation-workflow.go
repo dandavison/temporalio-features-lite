@@ -88,23 +88,26 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 	defer func() {
 		// *** Notify CI service that pipeline is complete ***
 		// We do not allow failure of this activity to fail the workflow.
+		fmt.Println("in defer func")
 		activities.CallPipelineCompletionCallback(ctx, input.CallbackInput)
 	}()
-
-	var status = InProgress
 
 	output := Output{
 		Description: []StringDatum{{Name: "Run", Value: "Fake OSS Server validation run 1"}, {Name: "Server version", Value: "fake-server-release-tag"}},
 	}
-	err := workflow.SetQueryHandler(ctx, "getStatus", func() (Status, error) { return status, nil })
-	if err != nil {
-		return output, err
-	}
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 1; i++ {
 		fmt.Printf("Wf: Sleeping %d\n", i)
 		workflow.Sleep(ctx, 10*time.Second)
 	}
+
+	var err error
+	err = nil
+	if err != nil {
+		fmt.Println("Early error exit...")
+		return output, err
+	}
+
 	fmt.Println("Wf: Done")
 
 	output.Output = RunTestsOutput{
@@ -127,7 +130,6 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 		},
 	}
 
-	status = Done
-
+	fmt.Println("about to return")
 	return output, nil
 }
