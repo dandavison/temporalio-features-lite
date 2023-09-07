@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -101,8 +102,7 @@ func FakeOSSReleaseValidationWorkflow(ctx workflow.Context, input Input) (Output
 		workflow.Sleep(ctx, 10*time.Second)
 	}
 
-	var err error
-	err = nil
+	err := errors.New("fake error")
 	if err != nil {
 		fmt.Println("Early error exit...")
 		return output, err
